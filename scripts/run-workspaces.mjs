@@ -19,7 +19,14 @@ if (!npmCli) {
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
-const workspaces = ['packages/contracts', 'packages/config', 'apps/api', 'apps/worker', 'apps/web'];
+const workspaces = [
+  'packages/contracts',
+  'packages/config',
+  'packages/database',
+  'apps/api',
+  'apps/worker',
+  'apps/web',
+];
 
 function runWorkspaceTask(workspace, workspaceTask) {
   console.log(`\n> ${workspace}: ${workspaceTask}`);
@@ -47,6 +54,7 @@ function runWorkspaceTask(workspace, workspaceTask) {
 if (task === 'test' || task === 'typecheck') {
   runWorkspaceTask('packages/contracts', 'build');
   runWorkspaceTask('packages/config', 'build');
+  runWorkspaceTask('packages/database', 'build');
 }
 
 for (const workspace of workspaces) {

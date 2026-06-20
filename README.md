@@ -14,6 +14,7 @@ evolve together without drifting apart.
 
 - `packages/config` — validated runtime configuration
 - `packages/contracts` — shared API and job contracts
+- `packages/database` — PostgreSQL schema, migrations, and shared database access
 
 ## Requirements
 
@@ -25,6 +26,8 @@ evolve together without drifting apart.
 
 ```bash
 npm install
+npm run db:up
+npm run db:migrate
 npm run dev
 npm run check
 ```
