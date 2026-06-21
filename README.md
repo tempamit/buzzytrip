@@ -20,7 +20,7 @@ evolve together without drifting apart.
 
 - Node.js 22
 - npm 10+
-- Docker (database and deployment work begins in the next phase)
+- Docker Desktop for PostgreSQL and production-container verification
 
 ## Local commands
 
@@ -30,6 +30,7 @@ npm run db:up
 npm run db:migrate
 npm run dev
 npm run check
+npm run deploy:smoke
 ```
 
 `npm run check` is the release gate: formatting, linting, type checking, tests, and builds must all
@@ -38,6 +39,7 @@ order so local machines and the initial VPS are not overwhelmed by competing bui
 
 ## Current scope
 
-This initial foundation deliberately contains no destination content or model integrations. Those
-features will be added only after the health, configuration, test, and deployment boundaries are
-verified.
+The foundation now includes the destination, trend, evidence, media-rights, immutable revision, and
+publication lifecycle, plus published-only destination read APIs. It deliberately contains no
+seeded travel content or model-provider integration yet. The workflow is documented in
+`docs/content-lifecycle.md`.

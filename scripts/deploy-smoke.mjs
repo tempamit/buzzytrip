@@ -29,13 +29,24 @@ function wait(milliseconds) {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
 
+async function fetchWithTimeout(url, timeoutMilliseconds = 3_000) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMilliseconds);
+
+  try {
+    return await fetch(url, { signal: controller.signal });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 async function waitForHttp(url, validate, timeoutMilliseconds = 120_000) {
   const deadline = Date.now() + timeoutMilliseconds;
   let lastError;
 
   while (Date.now() < deadline) {
     try {
-      const response = await fetch(url, { signal: AbortSignal.timeout(3_000) });
+      const response = await fetchWithTimeout(url);
       const body = await response.text();
 
       if (response.ok && validate(body)) {
@@ -66,8 +77,26 @@ try {
         return false;
       }
     }),
+    waitForHttp('http://127.0.0.1:14000/api/destinations', (body) => {
+      try {
+        const guides = JSON.parse(body);
+        return Array.isArray(guides) && guides.length === 0;
+      } catch {
+        return false;
+      }
+    }),
     waitForHttp('http://127.0.0.1:13000', (body) => body.includes('BuzzyTrip')),
   ]);
+
+  const missingGuideResponse = await fetchWithTimeout(
+    'http://127.0.0.1:14000/api/destinations/smoke-test-missing-guide',
+  );
+
+  if (missingGuideResponse.status !== 404) {
+    throw new Error(
+      `A missing destination guide returned HTTP ${missingGuideResponse.status} instead of 404.`,
+    );
+  }
 
   const heartbeatCount = runDocker(
     [
