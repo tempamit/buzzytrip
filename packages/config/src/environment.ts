@@ -70,6 +70,26 @@ const workerEnvironmentSchema = z
     MODEL_REQUEST_TIMEOUT_MS: z.coerce.number().int().min(5_000).max(180_000).default(90_000),
     MODEL_TEMPERATURE: z.coerce.number().min(0).max(1).default(0.35),
     NODE_ENV: nodeEnvironmentSchema.default('development'),
+    TREND_DISCOVERY_ENABLED: environmentBooleanSchema.default(false),
+    TREND_DISCOVERY_INTERVAL_MS: z.coerce.number().int().min(3_600_000).default(86_400_000),
+    TREND_GOOGLE_GEOS: z
+      .string()
+      .default('IN,US,GB,AU,AE,SG')
+      .transform((value) => value.split(',').map((geo) => geo.trim().toUpperCase()))
+      .pipe(z.array(z.string().length(2)).min(1).max(12))
+      .refine((geos) => new Set(geos).size === geos.length, {
+        message: 'TREND_GOOGLE_GEOS cannot contain duplicates.',
+      }),
+    TREND_LOOKBACK_DAYS: z.coerce.number().int().min(2).max(30).default(7),
+    TREND_MAX_SIGNALS_PER_PROVIDER: z.coerce.number().int().min(10).max(1_000).default(500),
+    TREND_REQUEST_TIMEOUT_MS: z.coerce.number().int().min(5_000).max(60_000).default(15_000),
+    TREND_SOURCE_LAG_DAYS: z.coerce.number().int().min(1).max(7).default(2),
+    TREND_USER_AGENT: z
+      .string()
+      .trim()
+      .min(10)
+      .max(240)
+      .default('BuzzyTrip/0.1 (https://www.buzzytrip.com)'),
     WORKER_HEARTBEAT_INTERVAL_MS: z.coerce.number().int().min(1_000).default(30_000),
   })
   .superRefine((environment, context) => {

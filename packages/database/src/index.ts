@@ -5,3 +5,4 @@ export * from './model-usage';
 export * from './publication-gap';
 export * from './published-guides';
 export * from './schema';
+export * from './trends';

@@ -22,6 +22,13 @@
       "when": 1782023767779,
       "tag": "0002_deep_pride",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1782070158393,
+      "tag": "0003_colorful_lifeguard",
+      "breakpoints": true
     }
   ]
 }

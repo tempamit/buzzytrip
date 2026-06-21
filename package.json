@@ -28,6 +28,7 @@
     "db:restore": "node scripts/database-restore.mjs",
     "db:up": "docker compose up -d database",
     "db:verify-model-quota": "node scripts/verify-model-quota.mjs",
+    "db:verify-trends": "node scripts/verify-trend-storage.mjs",
     "dev": "turbo run dev --parallel",
     "deploy:build": "docker compose -f compose.coolify.yaml build",
     "deploy:config": "docker compose -f compose.coolify.yaml config --quiet",
@@ -37,6 +38,7 @@
     "lint": "eslint scripts eslint.config.mjs --max-warnings=0 && node scripts/run-workspaces.mjs lint",
     "typecheck": "node scripts/run-workspaces.mjs typecheck",
     "test": "node scripts/run-workspaces.mjs test",
+    "trend:dry-run": "tsx apps/worker/src/trends/dry-run.ts",
     "check": "prettier --check . && eslint scripts eslint.config.mjs --max-warnings=0 && node scripts/run-workspaces.mjs lint && node scripts/run-workspaces.mjs typecheck && node scripts/run-workspaces.mjs test && node scripts/run-workspaces.mjs build"
   },
   "devDependencies": {

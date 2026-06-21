@@ -7,6 +7,7 @@ import type {
   GuideRevisionStatus,
   GuideStatus,
   ModelProviderName,
+  TrendSignalProvider,
   TrendCandidateStatus,
 } from '@buzzytrip/contracts';
 import { sql } from 'drizzle-orm';
@@ -126,6 +127,46 @@ export const trendCandidates = pgTable(
     ),
     index('trend_candidates_selection_idx').on(table.observedOn, table.scope, table.status),
     check('trend_candidates_scope_check', sql`${table.scope} in ('india', 'international')`),
+  ],
+);
+
+export const trendObservations = pgTable(
+  'trend_observations',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    provider: varchar('provider', { length: 40 }).$type<TrendSignalProvider>().notNull(),
+    displayName: varchar('display_name', { length: 180 }).notNull(),
+    normalizedName: varchar('normalized_name', { length: 180 }).notNull(),
+    observedOn: date('observed_on').notNull(),
+    metricValue: numeric('metric_value', { precision: 16, scale: 3 }).notNull(),
+    rank: integer('rank'),
+    score: numeric('score', { precision: 6, scale: 3 }).notNull(),
+    sourceUrl: text('source_url').notNull(),
+    context: jsonb('context')
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('trend_observations_provider_name_day_unique').on(
+      table.provider,
+      table.normalizedName,
+      table.observedOn,
+    ),
+    index('trend_observations_day_provider_score_idx').on(
+      table.observedOn,
+      table.provider,
+      table.score,
+    ),
+    check(
+      'trend_observations_provider_check',
+      sql`${table.provider} in ('google_trends', 'wikivoyage_pageviews', 'wikipedia_pageviews')`,
+    ),
+    check('trend_observations_metric_value_check', sql`${table.metricValue} >= 0`),
+    check('trend_observations_rank_check', sql`${table.rank} is null or ${table.rank} > 0`),
+    check('trend_observations_score_check', sql`${table.score} >= 0 and ${table.score} <= 100`),
   ],
 );
 
@@ -391,4 +432,5 @@ export const databaseSchema = {
   serviceHeartbeats,
   systemSettings,
   trendCandidates,
+  trendObservations,
 };

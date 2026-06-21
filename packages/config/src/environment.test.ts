@@ -38,6 +38,14 @@ describe('runtime configuration', () => {
       MODEL_PROVIDER_ORDER: ['gemini', 'groq'],
       MODEL_REQUEST_TIMEOUT_MS: 90000,
       MODEL_TEMPERATURE: 0.35,
+      TREND_DISCOVERY_ENABLED: false,
+      TREND_DISCOVERY_INTERVAL_MS: 86400000,
+      TREND_GOOGLE_GEOS: ['IN', 'US', 'GB', 'AU', 'AE', 'SG'],
+      TREND_LOOKBACK_DAYS: 7,
+      TREND_MAX_SIGNALS_PER_PROVIDER: 500,
+      TREND_REQUEST_TIMEOUT_MS: 15000,
+      TREND_SOURCE_LAG_DAYS: 2,
+      TREND_USER_AGENT: 'BuzzyTrip/0.1 (https://www.buzzytrip.com)',
       WORKER_HEARTBEAT_INTERVAL_MS: 5000,
     });
   });
@@ -75,5 +83,21 @@ describe('runtime configuration', () => {
       GEMINI_API_KEY: 'test-gemini-key',
       MODEL_PROVIDER_ORDER: ['groq', 'gemini'],
     });
+  });
+
+  it('parses distinct Google Trends geographies while discovery remains disabled', () => {
+    expect(
+      parseWorkerEnvironment({
+        TREND_DISCOVERY_ENABLED: 'false',
+        TREND_GOOGLE_GEOS: 'in,us,gb',
+      }),
+    ).toMatchObject({
+      TREND_DISCOVERY_ENABLED: false,
+      TREND_GOOGLE_GEOS: ['IN', 'US', 'GB'],
+    });
+
+    expect(() => parseWorkerEnvironment({ TREND_GOOGLE_GEOS: 'IN,IN' })).toThrow(
+      'TREND_GOOGLE_GEOS cannot contain duplicates',
+    );
   });
 });
