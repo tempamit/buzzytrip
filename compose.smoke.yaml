@@ -1,0 +1,36 @@
+name: buzzytrip-smoke
+
+services:
+  database:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: buzzytrip
+      POSTGRES_PASSWORD: buzzytrip_smoke
+      POSTGRES_USER: buzzytrip
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U buzzytrip -d buzzytrip']
+      interval: 3s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+
+  migrate:
+    depends_on:
+      database:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://buzzytrip:buzzytrip_smoke@database:5432/buzzytrip
+
+  api:
+    environment:
+      DATABASE_URL: postgresql://buzzytrip:buzzytrip_smoke@database:5432/buzzytrip
+    ports:
+      - '127.0.0.1:14000:4000'
+
+  worker:
+    environment:
+      DATABASE_URL: postgresql://buzzytrip:buzzytrip_smoke@database:5432/buzzytrip
+
+  web:
+    ports:
+      - '127.0.0.1:13000:3000'
