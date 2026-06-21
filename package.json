@@ -27,6 +27,7 @@
     "db:migrate": "tsx packages/database/src/migrate.ts",
     "db:restore": "node scripts/database-restore.mjs",
     "db:up": "docker compose up -d database",
+    "db:verify-model-quota": "node scripts/verify-model-quota.mjs",
     "dev": "turbo run dev --parallel",
     "deploy:build": "docker compose -f compose.coolify.yaml build",
     "deploy:config": "docker compose -f compose.coolify.yaml config --quiet",

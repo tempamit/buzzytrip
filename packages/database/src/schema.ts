@@ -6,6 +6,7 @@ import type {
   DestinationType,
   GuideRevisionStatus,
   GuideStatus,
+  ModelProviderName,
   TrendCandidateStatus,
 } from '@buzzytrip/contracts';
 import { sql } from 'drizzle-orm';
@@ -315,6 +316,66 @@ export const contentPublications = pgTable(
   ],
 );
 
+export const modelUsageDaily = pgTable(
+  'model_usage_daily',
+  {
+    provider: varchar('provider', { length: 20 }).$type<ModelProviderName>().notNull(),
+    usageDate: date('usage_date').notNull(),
+    requestCount: integer('request_count').notNull().default(0),
+    inputTokens: integer('input_tokens').notNull().default(0),
+    outputTokens: integer('output_tokens').notNull().default(0),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.provider, table.usageDate] }),
+    check('model_usage_daily_provider_check', sql`${table.provider} in ('gemini', 'groq')`),
+    check('model_usage_daily_request_count_check', sql`${table.requestCount} >= 0`),
+    check('model_usage_daily_input_tokens_check', sql`${table.inputTokens} >= 0`),
+    check('model_usage_daily_output_tokens_check', sql`${table.outputTokens} >= 0`),
+  ],
+);
+
+export const modelGenerationAttempts = pgTable(
+  'model_generation_attempts',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    destinationId: uuid('destination_id').references(() => destinations.id, {
+      onDelete: 'set null',
+    }),
+    guideRevisionId: uuid('guide_revision_id').references(() => guideRevisions.id, {
+      onDelete: 'set null',
+    }),
+    provider: varchar('provider', { length: 20 }).$type<ModelProviderName>().notNull(),
+    model: varchar('model', { length: 120 }).notNull(),
+    promptVersion: varchar('prompt_version', { length: 40 }).notNull(),
+    status: varchar('status', { length: 20 })
+      .$type<'started' | 'succeeded' | 'failed' | 'quality_rejected'>()
+      .notNull()
+      .default('started'),
+    errorCode: varchar('error_code', { length: 80 }),
+    inputTokens: integer('input_tokens').notNull().default(0),
+    outputTokens: integer('output_tokens').notNull().default(0),
+    responseHash: varchar('response_hash', { length: 64 }),
+    metadata: jsonb('metadata')
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default(sql`'{}'::jsonb`),
+    startedAt: timestamp('started_at', { withTimezone: true }).notNull().defaultNow(),
+    completedAt: timestamp('completed_at', { withTimezone: true }),
+  },
+  (table) => [
+    index('model_generation_attempts_provider_started_idx').on(table.provider, table.startedAt),
+    index('model_generation_attempts_destination_status_idx').on(table.destinationId, table.status),
+    check('model_generation_attempts_input_tokens_check', sql`${table.inputTokens} >= 0`),
+    check('model_generation_attempts_output_tokens_check', sql`${table.outputTokens} >= 0`),
+    check('model_generation_attempts_provider_check', sql`${table.provider} in ('gemini', 'groq')`),
+    check(
+      'model_generation_attempts_status_check',
+      sql`${table.status} in ('started', 'succeeded', 'failed', 'quality_rejected')`,
+    ),
+  ],
+);
+
 export const databaseSchema = {
   contentPublications,
   destinationAliases,
@@ -324,6 +385,8 @@ export const databaseSchema = {
   guideRevisionSources,
   guideRevisions,
   mediaAssets,
+  modelGenerationAttempts,
+  modelUsageDaily,
   researchSources,
   serviceHeartbeats,
   systemSettings,

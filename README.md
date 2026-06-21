@@ -28,6 +28,7 @@ evolve together without drifting apart.
 npm install
 npm run db:up
 npm run db:migrate
+npm run db:verify-model-quota
 npm run dev
 npm run check
 npm run deploy:smoke
@@ -40,6 +41,7 @@ order so local machines and the initial VPS are not overwhelmed by competing bui
 ## Current scope
 
 The foundation now includes the destination, trend, evidence, media-rights, immutable revision, and
-publication lifecycle, plus published-only destination read APIs. It deliberately contains no
-seeded travel content or model-provider integration yet. The workflow is documented in
-`docs/content-lifecycle.md`.
+publication lifecycle, plus published-only destination read APIs. The worker has disabled-by-default
+Gemini and Groq adapters, persistent free-usage budgets, structured prompts, and editorial quality
+gates. It deliberately contains no provider secrets, live model calls, or seeded travel content yet.
+The workflows are documented in `docs/content-lifecycle.md` and `docs/model-providers.md`.

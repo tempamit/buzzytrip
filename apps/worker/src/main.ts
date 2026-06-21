@@ -8,6 +8,7 @@ import {
 import pino from 'pino';
 
 import { createWorkerHeartbeat } from './heartbeat';
+import { createConfiguredModelProviders } from './models/provider-factory';
 
 async function run(): Promise<void> {
   const environment = parseWorkerEnvironment(process.env);
@@ -18,17 +19,27 @@ async function run(): Promise<void> {
     environment.DB_POOL_MAX,
   );
   const database = createDatabase(pool);
+  const configuredModelProviders = createConfiguredModelProviders(environment);
+  const heartbeatMetadata = {
+    contentGenerationEnabled: environment.CONTENT_GENERATION_ENABLED,
+    modelProviders: configuredModelProviders.map(({ dailyRequestLimit, provider }) => ({
+      dailyRequestLimit,
+      model: provider.model,
+      provider: provider.name,
+    })),
+    pid: process.pid,
+  };
 
   await checkDatabaseConnection(pool);
-  await recordServiceHeartbeat(database, 'worker', { pid: process.pid });
-  logger.info(createWorkerHeartbeat(), 'BuzzyTrip worker started');
+  await recordServiceHeartbeat(database, 'worker', heartbeatMetadata);
+  logger.info({ ...createWorkerHeartbeat(), ...heartbeatMetadata }, 'BuzzyTrip worker started');
 
   let heartbeatRunning = false;
   const heartbeat = setInterval(() => {
     if (heartbeatRunning) return;
     heartbeatRunning = true;
 
-    void recordServiceHeartbeat(database, 'worker', { pid: process.pid })
+    void recordServiceHeartbeat(database, 'worker', heartbeatMetadata)
       .then(() => logger.debug(createWorkerHeartbeat(), 'BuzzyTrip worker heartbeat'))
       .catch((error: unknown) => logger.error({ error }, 'Worker heartbeat failed'))
       .finally(() => {
