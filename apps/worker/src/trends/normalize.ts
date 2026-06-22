@@ -1,3 +1,5 @@
+import { normalizeDestinationLookupKey } from '@buzzytrip/contracts';
+
 const trailingTravelTerms = /\s+(airport|flights?|hotels?|tourism|travel|trip|weather)$/iu;
 
 export function displayTrendName(value: string): string {
@@ -16,14 +18,7 @@ export function displayTrendName(value: string): string {
 }
 
 export function normalizeTrendName(value: string): string {
-  return displayTrendName(value)
-    .normalize('NFKD')
-    .replace(/[\u0300-\u036f]/gu, '')
-    .toLowerCase()
-    .replace(/&/gu, ' and ')
-    .replace(/[^\p{L}\p{N}]+/gu, ' ')
-    .replace(/\s+/gu, ' ')
-    .trim();
+  return normalizeDestinationLookupKey(displayTrendName(value));
 }
 
 export function trendLookupKeys(value: string): string[] {

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { GoogleTrendsProvider } from './google-trends.provider';
+import { fetchTrendFeed, TrendProviderError } from './provider';
 import { WikimediaPageviewProvider } from './wikimedia.provider';
 
 describe('public trend providers', () => {
@@ -78,5 +79,29 @@ describe('public trend providers', () => {
       rank: 2,
     });
     expect(signals[0]?.score).toBeGreaterThan(signals[1]?.score ?? 0);
+  });
+
+  it('keeps the timeout active while a response body is being read', async () => {
+    const fetchFunction = vi.fn((_url: string | URL | Request, init?: RequestInit) => {
+      const body = new ReadableStream({
+        start(controller) {
+          init?.signal?.addEventListener('abort', () => {
+            controller.error(new DOMException('Aborted', 'AbortError'));
+          });
+        },
+      });
+      return Promise.resolve(new Response(body, { status: 200 }));
+    });
+
+    const error = await fetchTrendFeed(
+      fetchFunction,
+      'google_trends',
+      'https://example.com/slow-feed',
+      'BuzzyTrip test agent',
+      10,
+    ).catch((caught: unknown) => caught);
+
+    expect(error).toBeInstanceOf(TrendProviderError);
+    expect(error).toMatchObject({ code: 'timeout' });
   });
 });

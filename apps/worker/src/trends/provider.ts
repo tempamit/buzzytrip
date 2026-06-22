@@ -43,7 +43,12 @@ export async function fetchTrendFeed(
         `${provider} returned HTTP ${response.status}.`,
       );
     }
-    return response;
+    const body = await response.arrayBuffer();
+    return new Response(body, {
+      headers: response.headers,
+      status: response.status,
+      statusText: response.statusText,
+    });
   } catch (error) {
     if (error instanceof TrendProviderError) throw error;
     const timedOut = error instanceof Error && error.name === 'AbortError';

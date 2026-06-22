@@ -18,6 +18,98 @@ export const destinationTypeSchema = z.enum([
   'wildlife',
 ]);
 export const destinationStatusSchema = z.enum(['active', 'archived']);
+
+export function normalizeDestinationLookupKey(value: string): string {
+  return value
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/gu, '')
+    .toLowerCase()
+    .replace(/&/gu, ' and ')
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .replace(/\s+/gu, ' ')
+    .trim();
+}
+
+const destinationAliasSchema = z
+  .string()
+  .trim()
+  .min(2)
+  .max(180)
+  .refine((alias) => alias === normalizeDestinationLookupKey(alias), {
+    message: 'Destination aliases must already be normalized lookup keys.',
+  });
+
+export const destinationCatalogEntrySchema = z
+  .object({
+    aliases: z.array(destinationAliasSchema).max(12),
+    countryCode: z.string().regex(/^[A-Z]{2}$/u),
+    countryName: z.string().trim().min(2).max(100),
+    destinationType: destinationTypeSchema,
+    name: shortText,
+    scope: destinationScopeSchema,
+    slug: z
+      .string()
+      .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/u)
+      .min(2)
+      .max(160),
+    stateOrRegion: z.string().trim().min(2).max(120).nullable(),
+  })
+  .strict()
+  .superRefine((entry, context) => {
+    const isIndian = entry.countryCode === 'IN' && entry.countryName === 'India';
+    if ((entry.scope === 'india') !== isIndian) {
+      context.addIssue({
+        code: 'custom',
+        message: 'India-scope destinations must use country code IN and country name India.',
+        path: ['scope'],
+      });
+    }
+
+    if (new Set(entry.aliases).size !== entry.aliases.length) {
+      context.addIssue({
+        code: 'custom',
+        message: 'Destination aliases cannot contain duplicates.',
+        path: ['aliases'],
+      });
+    }
+  });
+
+export const destinationCatalogSchema = z
+  .array(destinationCatalogEntrySchema)
+  .min(2)
+  .superRefine((entries, context) => {
+    const slugs = new Set<string>();
+    const lookupOwners = new Map<string, string>();
+
+    for (const [index, entry] of entries.entries()) {
+      if (slugs.has(entry.slug)) {
+        context.addIssue({
+          code: 'custom',
+          message: `Duplicate destination slug: ${entry.slug}`,
+          path: [index, 'slug'],
+        });
+      }
+      slugs.add(entry.slug);
+
+      const lookupKeys = new Set([
+        normalizeDestinationLookupKey(entry.name),
+        normalizeDestinationLookupKey(entry.slug),
+        ...entry.aliases,
+      ]);
+      for (const lookupKey of lookupKeys) {
+        const owner = lookupOwners.get(lookupKey);
+        if (owner && owner !== entry.slug) {
+          context.addIssue({
+            code: 'custom',
+            message: `Lookup key "${lookupKey}" is already owned by ${owner}.`,
+            path: [index, 'aliases'],
+          });
+        } else {
+          lookupOwners.set(lookupKey, entry.slug);
+        }
+      }
+    }
+  });
 export const trendCandidateStatusSchema = z.enum([
   'discovered',
   'matched',
@@ -166,6 +258,7 @@ export const publishedGuideDetailSchema = publishedGuideSummarySchema.extend({
 export type DestinationScope = z.infer<typeof destinationScopeSchema>;
 export type DestinationType = z.infer<typeof destinationTypeSchema>;
 export type DestinationStatus = z.infer<typeof destinationStatusSchema>;
+export type DestinationCatalogEntry = z.infer<typeof destinationCatalogEntrySchema>;
 export type TrendCandidateStatus = z.infer<typeof trendCandidateStatusSchema>;
 export type GuideStatus = z.infer<typeof guideStatusSchema>;
 export type GuideRevisionStatus = z.infer<typeof guideRevisionStatusSchema>;

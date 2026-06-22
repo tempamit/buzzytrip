@@ -120,6 +120,32 @@ try {
     throw new Error('The worker did not persist a healthy heartbeat.');
   }
 
+  const catalogCounts = runDocker(
+    [
+      'compose',
+      ...composeFiles,
+      'exec',
+      '-T',
+      'database',
+      'psql',
+      '-U',
+      'buzzytrip',
+      '-d',
+      'buzzytrip',
+      '-tAc',
+      `SELECT
+         COUNT(*),
+         COUNT(*) FILTER (WHERE scope = 'india'),
+         COUNT(*) FILTER (WHERE scope = 'international')
+       FROM destinations;`,
+    ],
+    { capture: true },
+  );
+
+  if (catalogCounts !== '176|75|101') {
+    throw new Error(`Unexpected destination catalogue counts: ${catalogCounts}`);
+  }
+
   smokePassed = true;
   console.log('\nBuzzyTrip container smoke test passed.');
 } catch (error) {

@@ -1,5 +1,5 @@
 import type { TrendSignal } from '@buzzytrip/contracts';
-import type { DestinationTrendIdentity } from '@buzzytrip/database';
+import { initialDestinationCatalog, type DestinationTrendIdentity } from '@buzzytrip/database';
 import { describe, expect, it } from 'vitest';
 
 import { rankDestinationTrends, selectDailyTrendLanes } from './ranking';
@@ -81,6 +81,38 @@ describe('destination trend ranking', () => {
     expect(selectDailyTrendLanes(candidates)).toMatchObject({
       india: { displayName: 'Udaipur' },
       international: { displayName: 'Bali' },
+    });
+  });
+
+  it('matches representative current and historical catalogue names', () => {
+    const selectedCatalogEntries = ['italy', 'japan', 'mumbai'].map((slug) => {
+      const destination = initialDestinationCatalog.find((entry) => entry.slug === slug);
+      if (!destination) throw new Error(`Missing test destination: ${slug}`);
+      return destination;
+    });
+    const catalogIdentities: DestinationTrendIdentity[] = selectedCatalogEntries.map(
+      (destination, index) => ({
+        ...destination,
+        id: `00000000-0000-4000-8000-${(index + 1).toString().padStart(12, '0')}`,
+      }),
+    );
+    const candidates = rankDestinationTrends(
+      [
+        signal('Italy', 'wikivoyage_pageviews', 88),
+        signal('Japan travel', 'google_trends', 84),
+        signal('Bombay', 'wikipedia_pageviews', 76),
+      ],
+      catalogIdentities,
+    );
+
+    expect(candidates.map((candidate) => candidate.displayName).sort()).toEqual([
+      'Italy',
+      'Japan',
+      'Mumbai',
+    ]);
+    expect(selectDailyTrendLanes(candidates)).toMatchObject({
+      india: { displayName: 'Mumbai' },
+      international: { displayName: 'Italy' },
     });
   });
 });

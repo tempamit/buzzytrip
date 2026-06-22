@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { destinationGuideSeoSchema, destinationScopeSchema } from './destinations';
+import {
+  destinationCatalogSchema,
+  destinationGuideSeoSchema,
+  destinationScopeSchema,
+  normalizeDestinationLookupKey,
+} from './destinations';
 
 describe('destination contracts', () => {
   it('keeps Indian and international trend lanes explicit', () => {
@@ -30,6 +35,24 @@ describe('destination contracts', () => {
         ...baseSeo,
         supportingKeywords: Array.from({ length: 9 }, (_, index) => `keyword ${index}`),
       }),
+    ).toThrow();
+  });
+
+  it('normalizes catalogue names and rejects ambiguous aliases', () => {
+    expect(normalizeDestinationLookupKey("Côte d'Azur & Nice")).toBe('cote d azur and nice');
+
+    const destination = {
+      aliases: ['benares'],
+      countryCode: 'IN',
+      countryName: 'India',
+      destinationType: 'heritage' as const,
+      name: 'Varanasi',
+      scope: 'india' as const,
+      slug: 'varanasi',
+      stateOrRegion: 'Uttar Pradesh',
+    };
+    expect(() =>
+      destinationCatalogSchema.parse([destination, { ...destination, slug: 'kashi' }]),
     ).toThrow();
   });
 });
