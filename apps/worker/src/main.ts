@@ -25,6 +25,7 @@ async function run(): Promise<void> {
   const configuredTrendProviders = createTrendProviders(environment);
   const heartbeatMetadata = {
     contentGenerationEnabled: environment.CONTENT_GENERATION_ENABLED,
+    mediaDiscoveryEnabled: environment.MEDIA_DISCOVERY_ENABLED,
     modelProviders: configuredModelProviders.map(({ dailyRequestLimit, provider }) => ({
       dailyRequestLimit,
       model: provider.model,

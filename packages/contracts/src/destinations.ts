@@ -236,8 +236,12 @@ export const publishedGuideMediaSchema = z.object({
   alt: z.string().min(5).max(240),
   caption: z.string().max(500).nullable(),
   credit: z.string().min(2).max(240),
+  creditUrl: z.string().url(),
   height: z.number().int().positive().nullable(),
+  license: z.string().min(2).max(100),
+  licenseUrl: z.string().url(),
   role: z.enum(['hero', 'gallery', 'inline']),
+  sourceUrl: z.string().url(),
   url: z.string().url(),
   width: z.number().int().positive().nullable(),
 });

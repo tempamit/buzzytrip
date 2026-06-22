@@ -112,4 +112,30 @@ describe('structured model providers', () => {
     expect(error).toMatchObject({ code: 'rate_limited', retryable: true, status: 429 });
     expect((error as Error).message).not.toContain('account details');
   });
+
+  it('keeps the model deadline active while reading a stalled response body', async () => {
+    const fetchFunction = vi.fn((_url: string | URL | Request, init?: RequestInit) => {
+      const body = new ReadableStream({
+        start(controller) {
+          init?.signal?.addEventListener('abort', () => {
+            controller.error(new DOMException('Aborted', 'AbortError'));
+          });
+        },
+      });
+      return Promise.resolve(new Response(body, { status: 200 }));
+    });
+    const provider = new GroqProvider({
+      apiBaseUrl: 'https://api.groq.com/openai/v1',
+      apiKey: 'test-groq-key',
+      fetchFunction,
+      maxOutputTokens: 2048,
+      model: 'openai/gpt-oss-20b',
+      temperature: 0.35,
+      timeoutMilliseconds: 10,
+    });
+
+    const error = await provider.generate(request).catch((caught: unknown) => caught);
+    expect(error).toBeInstanceOf(ModelProviderError);
+    expect(error).toMatchObject({ code: 'timeout' });
+  });
 });

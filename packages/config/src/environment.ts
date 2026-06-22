@@ -64,12 +64,26 @@ const workerEnvironmentSchema = z
     GROQ_DAILY_REQUEST_LIMIT: z.coerce.number().int().min(1).max(500).default(10),
     GROQ_MODEL: z.string().trim().min(2).default('openai/gpt-oss-20b'),
     LOG_LEVEL: logLevelSchema.default('info'),
+    MEDIA_DISCOVERY_ENABLED: environmentBooleanSchema.default(false),
     MODEL_MAX_OUTPUT_TOKENS: z.coerce.number().int().min(1_024).max(32_768).default(8_192),
     MODEL_MAX_SOURCE_CHARACTERS: z.coerce.number().int().min(1_000).max(200_000).default(60_000),
     MODEL_PROVIDER_ORDER: modelProviderOrderSchema,
     MODEL_REQUEST_TIMEOUT_MS: z.coerce.number().int().min(5_000).max(180_000).default(90_000),
     MODEL_TEMPERATURE: z.coerce.number().min(0).max(1).default(0.35),
     NODE_ENV: nodeEnvironmentSchema.default('development'),
+    RESEARCH_MAX_SOURCE_BYTES: z.coerce
+      .number()
+      .int()
+      .min(100_000)
+      .max(10_000_000)
+      .default(3_000_000),
+    RESEARCH_REQUEST_TIMEOUT_MS: z.coerce.number().int().min(5_000).max(60_000).default(20_000),
+    RESEARCH_USER_AGENT: z
+      .string()
+      .trim()
+      .min(10)
+      .max(240)
+      .default('BuzzyTrip/0.1 (https://www.buzzytrip.com)'),
     TREND_DISCOVERY_ENABLED: environmentBooleanSchema.default(false),
     TREND_DISCOVERY_INTERVAL_MS: z.coerce.number().int().min(3_600_000).default(86_400_000),
     TREND_GOOGLE_GEOS: z
@@ -90,6 +104,14 @@ const workerEnvironmentSchema = z
       .min(10)
       .max(240)
       .default('BuzzyTrip/0.1 (https://www.buzzytrip.com)'),
+    UNSPLASH_ACCESS_KEY: optionalApiKeySchema,
+    UNSPLASH_API_BASE_URL: z.string().url().default('https://api.unsplash.com'),
+    UNSPLASH_APPLICATION_NAME: z
+      .string()
+      .trim()
+      .regex(/^[a-z0-9_-]+$/u)
+      .default('buzzytrip'),
+    UNSPLASH_IMAGES_PER_GUIDE: z.coerce.number().int().min(1).max(8).default(4),
     WORKER_HEARTBEAT_INTERVAL_MS: z.coerce.number().int().min(1_000).default(30_000),
   })
   .superRefine((environment, context) => {
@@ -103,6 +125,13 @@ const workerEnvironmentSchema = z
         message:
           'At least one provider API key is required when CONTENT_GENERATION_ENABLED is true.',
         path: ['CONTENT_GENERATION_ENABLED'],
+      });
+    }
+    if (environment.MEDIA_DISCOVERY_ENABLED && !environment.UNSPLASH_ACCESS_KEY) {
+      context.addIssue({
+        code: 'custom',
+        message: 'UNSPLASH_ACCESS_KEY is required when MEDIA_DISCOVERY_ENABLED is true.',
+        path: ['MEDIA_DISCOVERY_ENABLED'],
       });
     }
   });

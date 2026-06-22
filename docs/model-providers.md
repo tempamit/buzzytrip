@@ -48,6 +48,8 @@ Every generated guide must:
 - keep the primary-keyword density below the stuffing threshold;
 - remain sufficiently different from previous BuzzyTrip guides;
 - use only bounded research evidence supplied by the worker; and
+- reference valid evidence indexes across every factual guide section;
+- remain sufficiently different from the wording of supplied sources; and
 - remain unpublished until source, media-rights, and publication checks also pass.
 
 No AI detector can reliably prove authorship. BuzzyTrip therefore optimises for useful, sourced,

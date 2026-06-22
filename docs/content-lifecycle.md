@@ -18,6 +18,8 @@ is never a public page by itself.
 - Research records retain the page URL, publisher, retrieval date, and a content hash; copied source
   bodies are not used as article content.
 - Each factual section can be traced to one or more source records.
+- Source bodies are kept only in the bounded in-memory evidence bundle; the database stores metadata
+  and content hashes instead of copied research pages.
 - Every revision has a content fingerprint. The database rejects an identical fingerprint even when
   a destination is intentionally featured again.
 - A repeated destination receives a new angle, title, theme, and immutable revision.
@@ -26,6 +28,8 @@ is never a public page by itself.
 
 - Image records include their provider, original URL, storage key, credit, licence, dimensions, alt
   text, and checksum.
+- Unsplash records also retain clickable photographer, photo-source, and licence links. Images stay
+  hotlinked and the provider usage endpoint is called when an image is attached.
 - A guide revision explicitly assigns hero, gallery, and inline roles.
 - An image without known usage rights and attribution cannot enter the publication workflow.
 

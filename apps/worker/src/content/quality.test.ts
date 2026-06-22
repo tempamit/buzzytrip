@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { calculateTextSimilarity, evaluateEditorialText } from './quality';
+import {
+  calculateTextSimilarity,
+  evaluateEditorialText,
+  evaluateSourceUseCoverage,
+} from './quality';
 
 const relaxedThresholds = {
   maximumAverageSentenceWords: 30,
@@ -46,5 +50,34 @@ describe('editorial quality gate', () => {
       expect.arrayContaining(['keyword_stuffing', 'too_similar']),
     );
     expect(calculateTextSimilarity(text, text)).toBe(1);
+  });
+
+  it('rejects close reproduction of supplied research evidence', () => {
+    const evidence =
+      'The eastern entrance opens before sunrise and the local shuttle stops beside the ticket office. ';
+    const report = evaluateEditorialText(evidence.repeat(8), {
+      ...relaxedThresholds,
+      maximumSourceSimilarity: 0.42,
+      sourceTexts: [evidence.repeat(8)],
+    });
+
+    expect(report.issues.map((issue) => issue.code)).toContain('source_overlap');
+  });
+
+  it('requires valid evidence indexes across every factual guide section', () => {
+    const issues = evaluateSourceUseCoverage(
+      [
+        {
+          claimSummary: 'The first source supports only the opening destination overview.',
+          sectionKeys: ['overview'],
+          sourceIndex: 4,
+        },
+      ],
+      3,
+    );
+
+    expect(issues.map((issue) => issue.code)).toEqual(
+      expect.arrayContaining(['insufficient_source_coverage', 'invalid_source_reference']),
+    );
   });
 });

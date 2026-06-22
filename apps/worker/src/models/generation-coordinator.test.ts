@@ -102,4 +102,36 @@ describe('GenerationCoordinator', () => {
       ],
     });
   });
+
+  it('records an audited model attempt without retaining response text', async () => {
+    const observer = {
+      complete: vi.fn().mockResolvedValue(undefined),
+      start: vi.fn().mockResolvedValue('11111111-1111-4111-8111-111111111111'),
+    };
+    const coordinator = new GenerationCoordinator(
+      [configured('gemini', 'clear')],
+      createBudget([true]),
+      observer,
+    );
+
+    await expect(
+      coordinator.generate(
+        {
+          ...request,
+          audit: {
+            destinationId: '22222222-2222-4222-8222-222222222222',
+            promptVersion: 'test-prompt-v1',
+          },
+        },
+        () => ({ passed: true }),
+      ),
+    ).resolves.toMatchObject({ attemptId: '11111111-1111-4111-8111-111111111111' });
+    expect(observer.start).toHaveBeenCalledWith(
+      expect.objectContaining({ model: 'gemini-model', provider: 'gemini' }),
+    );
+    expect(observer.complete).toHaveBeenCalledWith(
+      '11111111-1111-4111-8111-111111111111',
+      expect.objectContaining({ responseHash: expect.stringMatching(/^[a-f0-9]{64}$/u) }),
+    );
+  });
 });

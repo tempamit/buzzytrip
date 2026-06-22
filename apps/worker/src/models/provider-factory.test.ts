@@ -8,6 +8,15 @@ describe('model provider factory', () => {
     expect(createConfiguredModelProviders(parseWorkerEnvironment({}))).toEqual([]);
   });
 
+  it('allows only an explicit manual run to bypass the automatic-generation switch', () => {
+    const environment = parseWorkerEnvironment({ GEMINI_API_KEY: 'test-gemini-key' });
+    expect(
+      createConfiguredModelProviders(environment, undefined, { ignoreEnabled: true }).map(
+        ({ provider }) => provider.name,
+      ),
+    ).toEqual(['gemini']);
+  });
+
   it('uses only configured keys and respects provider order', () => {
     const environment = parseWorkerEnvironment({
       CONTENT_GENERATION_ENABLED: 'true',

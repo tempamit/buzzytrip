@@ -1,4 +1,4 @@
-import type { GeneratedDestinationGuide } from '@buzzytrip/contracts';
+import type { GeneratedDestinationGuide, GuideEvidenceSection } from '@buzzytrip/contracts';
 
 const editorialCliches = [
   'a hidden gem',
@@ -26,8 +26,13 @@ export type EditorialQualityIssueCode =
   | 'ai_self_reference'
   | 'duplicate_sentence'
   | 'editorial_cliche'
+  | 'insufficient_source_coverage'
+  | 'incorrect_canonical_path'
+  | 'incorrect_primary_keyword'
+  | 'invalid_source_reference'
   | 'keyword_stuffing'
   | 'long_sentences'
+  | 'source_overlap'
   | 'too_long'
   | 'too_short'
   | 'too_similar';
@@ -41,6 +46,7 @@ export interface EditorialQualityMetrics {
   averageSentenceWords: number;
   keywordDensityPercent: number;
   maximumPriorSimilarity: number;
+  maximumSourceSimilarity: number;
   wordCount: number;
 }
 
@@ -51,13 +57,63 @@ export interface EditorialQualityReport {
 }
 
 export interface EditorialQualityOptions {
+  evidenceSourceCount?: number;
+  expectedCanonicalPath?: string;
   maximumAverageSentenceWords?: number;
   maximumKeywordDensityPercent?: number;
   maximumPriorSimilarity?: number;
+  maximumSourceSimilarity?: number;
   maximumWords?: number;
   minimumWords?: number;
   primaryKeyword: string;
   priorTexts?: readonly string[];
+  sourceTexts?: readonly string[];
+}
+
+const requiredEvidenceSections: GuideEvidenceSection[] = [
+  'overview',
+  'best_time',
+  'highlights',
+  'how_to_reach',
+  'getting_around',
+  'stay',
+  'eat',
+  'age_and_mobility',
+  'practical',
+  'safety',
+  'responsible_travel',
+  'faqs',
+];
+
+export function evaluateSourceUseCoverage(
+  sourceUses: GeneratedDestinationGuide['sourceUses'],
+  evidenceSourceCount: number,
+): EditorialQualityIssue[] {
+  const issues: EditorialQualityIssue[] = [];
+  const usedSources = new Set(sourceUses.map((sourceUse) => sourceUse.sourceIndex));
+  const coveredSections = new Set(sourceUses.flatMap((sourceUse) => sourceUse.sectionKeys));
+  const invalidSources = [...usedSources].filter(
+    (sourceIndex) => sourceIndex < 0 || sourceIndex >= evidenceSourceCount,
+  );
+  if (invalidSources.length > 0) {
+    issues.push({
+      code: 'invalid_source_reference',
+      detail: `Source indexes are outside the supplied evidence: ${invalidSources.join(', ')}.`,
+    });
+  }
+
+  const minimumSources = Math.min(3, evidenceSourceCount);
+  const missingSections = requiredEvidenceSections.filter(
+    (section) => !coveredSections.has(section),
+  );
+  if (usedSources.size < minimumSources || missingSections.length > 0) {
+    issues.push({
+      code: 'insufficient_source_coverage',
+      detail: `Guide uses ${usedSources.size} sources and is missing evidence for: ${missingSections.join(', ') || 'none'}.`,
+    });
+  }
+
+  return issues;
 }
 
 function words(text: string): string[] {
@@ -141,6 +197,7 @@ export function evaluateEditorialText(
   const maximumAverageSentenceWords = options.maximumAverageSentenceWords ?? 24;
   const maximumKeywordDensityPercent = options.maximumKeywordDensityPercent ?? 2.5;
   const maximumPriorSimilarity = options.maximumPriorSimilarity ?? 0.68;
+  const maximumSourceSimilarity = options.maximumSourceSimilarity ?? 0.42;
   const primaryKeywordWords = words(options.primaryKeyword);
   const keywordWordMatches =
     phraseOccurrences(textWords, primaryKeywordWords) * primaryKeywordWords.length;
@@ -151,6 +208,10 @@ export function evaluateEditorialText(
   const maximumSimilarity = Math.max(
     0,
     ...(options.priorTexts ?? []).map((priorText) => calculateTextSimilarity(text, priorText)),
+  );
+  const maximumEvidenceSimilarity = Math.max(
+    0,
+    ...(options.sourceTexts ?? []).map((sourceText) => calculateTextSimilarity(text, sourceText)),
   );
   const issues: EditorialQualityIssue[] = [];
 
@@ -176,6 +237,12 @@ export function evaluateEditorialText(
     issues.push({
       code: 'too_similar',
       detail: `Similarity to an earlier guide is ${maximumSimilarity.toFixed(3)}.`,
+    });
+  }
+  if (maximumEvidenceSimilarity > maximumSourceSimilarity) {
+    issues.push({
+      code: 'source_overlap',
+      detail: `Similarity to supplied evidence is ${maximumEvidenceSimilarity.toFixed(3)}.`,
     });
   }
 
@@ -210,6 +277,7 @@ export function evaluateEditorialText(
       averageSentenceWords,
       keywordDensityPercent,
       maximumPriorSimilarity: maximumSimilarity,
+      maximumSourceSimilarity: maximumEvidenceSimilarity,
       wordCount: textWords.length,
     },
     passed: issues.length === 0,
@@ -220,5 +288,26 @@ export function evaluateGeneratedGuide(
   guide: GeneratedDestinationGuide,
   options: EditorialQualityOptions,
 ): EditorialQualityReport {
-  return evaluateEditorialText(generatedGuideEditorialText(guide), options);
+  const report = evaluateEditorialText(generatedGuideEditorialText(guide), options);
+  const sourceIssues = evaluateSourceUseCoverage(
+    guide.sourceUses,
+    options.evidenceSourceCount ?? 0,
+  );
+  if (options.expectedCanonicalPath && guide.seo.canonicalPath !== options.expectedCanonicalPath) {
+    sourceIssues.push({
+      code: 'incorrect_canonical_path',
+      detail: 'SEO canonical path does not match the assigned guide path.',
+    });
+  }
+  if (guide.seo.primaryKeyword.toLowerCase() !== options.primaryKeyword.toLowerCase()) {
+    sourceIssues.push({
+      code: 'incorrect_primary_keyword',
+      detail: 'SEO primary keyword does not match the assigned search phrase.',
+    });
+  }
+  return {
+    ...report,
+    issues: [...report.issues, ...sourceIssues],
+    passed: report.passed && sourceIssues.length === 0,
+  };
 }

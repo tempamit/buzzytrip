@@ -6,6 +6,11 @@ export interface ModelTokenUsage {
 }
 
 export interface StructuredGenerationRequest<T> {
+  audit?: {
+    destinationId?: string;
+    metadata?: Record<string, unknown>;
+    promptVersion: string;
+  };
   jsonSchema: Record<string, unknown>;
   schemaName: string;
   systemPrompt: string;
@@ -87,7 +92,13 @@ export async function fetchWithDeadline(
   const timeout = setTimeout(() => controller.abort(), timeoutMilliseconds);
 
   try {
-    return await fetchFunction(url, { ...init, signal: controller.signal });
+    const response = await fetchFunction(url, { ...init, signal: controller.signal });
+    const body = await response.arrayBuffer();
+    return new Response(body, {
+      headers: response.headers,
+      status: response.status,
+      statusText: response.statusText,
+    });
   } catch (error) {
     const isTimeout = error instanceof Error && error.name === 'AbortError';
     throw new ModelProviderError(

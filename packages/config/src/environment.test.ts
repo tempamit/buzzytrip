@@ -31,6 +31,7 @@ describe('runtime configuration', () => {
       GROQ_API_BASE_URL: 'https://api.groq.com/openai/v1',
       GROQ_DAILY_REQUEST_LIMIT: 10,
       GROQ_MODEL: 'openai/gpt-oss-20b',
+      MEDIA_DISCOVERY_ENABLED: false,
       NODE_ENV: 'test',
       LOG_LEVEL: 'debug',
       MODEL_MAX_OUTPUT_TOKENS: 8192,
@@ -38,6 +39,9 @@ describe('runtime configuration', () => {
       MODEL_PROVIDER_ORDER: ['gemini', 'groq'],
       MODEL_REQUEST_TIMEOUT_MS: 90000,
       MODEL_TEMPERATURE: 0.35,
+      RESEARCH_MAX_SOURCE_BYTES: 3_000_000,
+      RESEARCH_REQUEST_TIMEOUT_MS: 20_000,
+      RESEARCH_USER_AGENT: 'BuzzyTrip/0.1 (https://www.buzzytrip.com)',
       TREND_DISCOVERY_ENABLED: false,
       TREND_DISCOVERY_INTERVAL_MS: 86400000,
       TREND_GOOGLE_GEOS: ['IN', 'US', 'GB', 'AU', 'AE', 'SG'],
@@ -46,6 +50,9 @@ describe('runtime configuration', () => {
       TREND_REQUEST_TIMEOUT_MS: 15000,
       TREND_SOURCE_LAG_DAYS: 2,
       TREND_USER_AGENT: 'BuzzyTrip/0.1 (https://www.buzzytrip.com)',
+      UNSPLASH_API_BASE_URL: 'https://api.unsplash.com',
+      UNSPLASH_APPLICATION_NAME: 'buzzytrip',
+      UNSPLASH_IMAGES_PER_GUIDE: 4,
       WORKER_HEARTBEAT_INTERVAL_MS: 5000,
     });
   });
@@ -83,6 +90,18 @@ describe('runtime configuration', () => {
       GEMINI_API_KEY: 'test-gemini-key',
       MODEL_PROVIDER_ORDER: ['groq', 'gemini'],
     });
+  });
+
+  it('requires an Unsplash key only when media discovery is enabled', () => {
+    expect(() => parseWorkerEnvironment({ MEDIA_DISCOVERY_ENABLED: 'true' })).toThrow(
+      'UNSPLASH_ACCESS_KEY is required',
+    );
+    expect(
+      parseWorkerEnvironment({
+        MEDIA_DISCOVERY_ENABLED: 'true',
+        UNSPLASH_ACCESS_KEY: 'test-unsplash-key',
+      }),
+    ).toMatchObject({ MEDIA_DISCOVERY_ENABLED: true });
   });
 
   it('parses distinct Google Trends geographies while discovery remains disabled', () => {

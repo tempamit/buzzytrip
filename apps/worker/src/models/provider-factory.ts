@@ -13,8 +13,9 @@ export interface ConfiguredModelProvider {
 export function createConfiguredModelProviders(
   environment: WorkerEnvironment,
   fetchFunction?: FetchFunction,
+  options: { ignoreEnabled?: boolean } = {},
 ): ConfiguredModelProvider[] {
-  if (!environment.CONTENT_GENERATION_ENABLED) return [];
+  if (!environment.CONTENT_GENERATION_ENABLED && !options.ignoreEnabled) return [];
 
   const providers = new Map<ModelProviderName, ConfiguredModelProvider>();
 
